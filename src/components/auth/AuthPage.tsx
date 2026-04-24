@@ -163,7 +163,14 @@ export default function AuthPage() {
           <p className="text-center text-discord-300 text-sm mt-6">
             {isLogin ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
             <button
-              onClick={() => { setIsLogin(!isLogin); setError(null) }}
+              onClick={() => {
+                setIsLogin(!isLogin)
+                setError(null)
+                setEmail('')
+                setPassword('')
+                setFamilyName('')
+                setGivenName('')
+              }}
               className="text-discord-accent hover:underline font-medium"
             >
               {isLogin ? '회원가입' : '로그인'}
