@@ -3,7 +3,6 @@ import { supabase } from './lib/supabase'
 import { useAuthStore } from './stores/authStore'
 import { useServerStore } from './stores/serverStore'
 import { useMessageStore } from './stores/messageStore'
-import { useToastStore } from './stores/toastStore'
 import type { Profile, Server, Channel, ServerMember } from './types'
 import AuthPage from './components/auth/AuthPage'
 import ServerList from './components/layout/ServerList'
@@ -25,7 +24,6 @@ export default function App() {
     setServers, setCurrentServer, setChannels, setCurrentChannel, setMembers,
   } = useServerStore()
   const { setCurrentDMPartner, currentDMPartner } = useMessageStore()
-  const { show } = useToastStore()
 
   const [showMemberList, setShowMemberList] = useState(true)
   const [showCreateServer, setShowCreateServer] = useState(false)
