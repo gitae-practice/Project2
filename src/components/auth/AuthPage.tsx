@@ -24,7 +24,8 @@ export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [username, setUsername] = useState('')
+  const [familyName, setFamilyName] = useState('')
+  const [givenName, setGivenName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { show } = useToastStore()
@@ -42,8 +43,8 @@ export default function AuthPage() {
         show('로그인되었습니다.', 'success')
       }
     } else {
-      if (!username.trim()) {
-        setError('사용자 이름을 입력해주세요.')
+      if (!givenName.trim()) {
+        setError('이름을 입력해주세요.')
         setLoading(false)
         return
       }
@@ -53,14 +54,15 @@ export default function AuthPage() {
         return
       }
 
+      const username = `${familyName.trim()}${givenName.trim()}`
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { username: username.trim() } },
+        options: { data: { username } },
       })
 
       if (error) {
-        console.error('[signup error]', error.message)
         setError(translateError(error.message))
       } else {
         await supabase.auth.signOut()
@@ -68,7 +70,8 @@ export default function AuthPage() {
         setIsLogin(true)
         setEmail('')
         setPassword('')
-        setUsername('')
+        setFamilyName('')
+        setGivenName('')
       }
     }
     setLoading(false)
@@ -98,16 +101,25 @@ export default function AuthPage() {
             {!isLogin && (
               <div>
                 <label className="block text-discord-200 text-xs font-semibold uppercase tracking-wide mb-2">
-                  사용자 이름
+                  이름
                 </label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="홍길동"
-                  className="w-full bg-discord-900 text-white placeholder-discord-400 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-discord-accent transition-all"
-                  required
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={familyName}
+                    onChange={(e) => setFamilyName(e.target.value)}
+                    placeholder="성"
+                    className="w-20 bg-discord-900 text-white placeholder-discord-400 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-discord-accent transition-all flex-shrink-0"
+                  />
+                  <input
+                    type="text"
+                    value={givenName}
+                    onChange={(e) => setGivenName(e.target.value)}
+                    placeholder="이름"
+                    className="flex-1 bg-discord-900 text-white placeholder-discord-400 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-discord-accent transition-all"
+                    required
+                  />
+                </div>
               </div>
             )}
 

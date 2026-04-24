@@ -106,7 +106,7 @@ export default function ChannelList({ server, channels, currentChannel, onSelect
           {profile?.username?.slice(0, 2).toUpperCase() ?? '?'}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white truncate">{profile?.username}</p>
+          <p className="text-sm font-semibold text-white">{profile?.username}</p>
           <p className="text-xs text-discord-green flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-discord-green inline-block" />
             온라인
