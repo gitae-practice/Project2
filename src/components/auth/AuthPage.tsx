@@ -54,7 +54,7 @@ export default function AuthPage() {
         return
       }
 
-      const username = `${familyName.trim()}${givenName.trim()}`
+      const username = givenName.trim()
 
       const { error } = await supabase.auth.signUp({
         email,
