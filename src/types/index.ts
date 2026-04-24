@@ -55,3 +55,13 @@ export interface DMConversation {
   partner: Profile
   lastMessage?: DirectMessage
 }
+
+export interface FriendRequest {
+  id: string
+  sender_id: string
+  receiver_id: string
+  status: 'pending' | 'accepted' | 'rejected'
+  created_at: string
+  sender?: Profile
+  receiver?: Profile
+}

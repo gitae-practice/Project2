@@ -50,7 +50,25 @@ export default function App() {
     const code = sessionStorage.getItem('pendingInvite')
     if (!code) return
     sessionStorage.removeItem('pendingInvite')
-    setActiveInviteCode(code)
+
+    const handleExternalInvite = async () => {
+      await supabase.rpc('create_invite_dm', { invite_code: code, app_origin: window.location.origin })
+      const { data } = await supabase
+        .from('server_invites')
+        .select('created_by, profiles!created_by(id, username, avatar_url)')
+        .eq('code', code)
+        .single()
+      if (data?.profiles) {
+        const inviter = data.profiles as Profile
+        setDMPartners((prev) => prev.find((p) => p.id === inviter.id) ? prev : [inviter, ...prev])
+        setCurrentDMPartner(inviter.id)
+        setCurrentDMProfile(inviter)
+        setCurrentServer(null as any)
+      } else {
+        setActiveInviteCode(code)
+      }
+    }
+    handleExternalInvite()
   }, [user?.id])
 
   useEffect(() => {
@@ -132,10 +150,10 @@ export default function App() {
 
   if (!user) return <AuthPage />
 
-  const handleSelectDMPartner = (partnerId: string) => {
-    setCurrentDMPartner(partnerId)
-    const partner = dmPartners.find((p) => p.id === partnerId) ?? null
+  const handleSelectDMPartner = (partner: Profile) => {
+    setCurrentDMPartner(partner.id)
     setCurrentDMProfile(partner)
+    setDMPartners((prev) => prev.find((p) => p.id === partner.id) ? prev : [partner, ...prev])
   }
 
   return (
