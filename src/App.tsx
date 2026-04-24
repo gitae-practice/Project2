@@ -84,7 +84,15 @@ export default function App() {
         .from('server_members')
         .select('server_id, servers(*)')
         .eq('user_id', user.id)
-      if (memberData) setServers(memberData.map((d: any) => d.servers).filter(Boolean) as Server[])
+      if (memberData) {
+        const newServers = memberData.map((d: any) => d.servers).filter(Boolean) as Server[]
+        setServers(newServers)
+        const joinedServer = newServers.find((s) => s.id === invite.server_id)
+        if (joinedServer) {
+          setCurrentServer(joinedServer)
+          setCurrentDMPartner(null)
+        }
+      }
 
       show('서버에 참가되었습니다!', 'success')
     }
