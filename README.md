@@ -1,4 +1,4 @@
-# GitaeCode 💬
+# Gitae's Chat 💬
 
 Discord 스타일의 실시간 채팅 & 협업 웹 애플리케이션
 
