@@ -15,6 +15,7 @@ import DMArea from './components/dm/DMArea'
 import CreateServerModal from './components/modals/CreateServerModal'
 import CreateChannelModal from './components/modals/CreateChannelModal'
 import InviteModal from './components/modals/InviteModal'
+import InviteAcceptModal from './components/modals/InviteAcceptModal'
 import ToastContainer from './components/ui/Toast'
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
   const [showCreateServer, setShowCreateServer] = useState(false)
   const [showCreateChannel, setShowCreateChannel] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
+  const [activeInviteCode, setActiveInviteCode] = useState<string | null>(null)
   const [dmPartners, setDMPartners] = useState<Profile[]>([])
   const [currentDMProfile, setCurrentDMProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -38,7 +40,10 @@ export default function App() {
     const path = window.location.pathname
     if (path.startsWith('/invite/')) {
       const code = path.replace('/invite/', '').split('/')[0]
-      if (code) sessionStorage.setItem('pendingInvite', code)
+      if (code) {
+        sessionStorage.setItem('pendingInvite', code)
+        window.history.replaceState({}, '', '/')
+      }
     }
   }, [])
 
@@ -46,58 +51,8 @@ export default function App() {
     if (!user) return
     const code = sessionStorage.getItem('pendingInvite')
     if (!code) return
-
-    const processInvite = async () => {
-      const { data: invite } = await supabase
-        .from('server_invites')
-        .select('server_id')
-        .eq('code', code)
-        .single()
-
-      sessionStorage.removeItem('pendingInvite')
-      window.history.replaceState({}, '', '/')
-
-      if (!invite) {
-        show('유효하지 않은 초대 링크입니다.', 'error')
-        return
-      }
-
-      const { data: existing } = await supabase
-        .from('server_members')
-        .select('id')
-        .eq('server_id', invite.server_id)
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      if (existing) {
-        show('이미 해당 서버의 멤버입니다.', 'info')
-        return
-      }
-
-      await supabase.from('server_members').insert({
-        server_id: invite.server_id,
-        user_id: user.id,
-        role: 'member',
-      })
-
-      const { data: memberData } = await supabase
-        .from('server_members')
-        .select('server_id, servers(*)')
-        .eq('user_id', user.id)
-      if (memberData) {
-        const newServers = memberData.map((d: any) => d.servers).filter(Boolean) as Server[]
-        setServers(newServers)
-        const joinedServer = newServers.find((s) => s.id === invite.server_id)
-        if (joinedServer) {
-          setCurrentServer(joinedServer)
-          setCurrentDMPartner(null)
-        }
-      }
-
-      show('서버에 참가되었습니다!', 'success')
-    }
-
-    processInvite()
+    sessionStorage.removeItem('pendingInvite')
+    setActiveInviteCode(code)
   }, [user?.id])
 
   useEffect(() => {
@@ -228,6 +183,7 @@ export default function App() {
       {showCreateServer && <CreateServerModal onClose={() => setShowCreateServer(false)} />}
       {showCreateChannel && <CreateChannelModal onClose={() => setShowCreateChannel(false)} />}
       {showInvite && currentServer && <InviteModal server={currentServer} onClose={() => setShowInvite(false)} />}
+      {activeInviteCode && <InviteAcceptModal code={activeInviteCode} onClose={() => setActiveInviteCode(null)} />}
       <ToastContainer />
     </div>
   )

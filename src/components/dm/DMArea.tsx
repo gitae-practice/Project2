@@ -6,6 +6,12 @@ import { useAuthStore } from '../../stores/authStore'
 import { useMessageStore } from '../../stores/messageStore'
 import { supabase } from '../../lib/supabase'
 import MessageInput from '../chat/MessageInput'
+import InviteCard from './InviteCard'
+
+function extractInviteCode(content: string): string | null {
+  const match = content.match(/\/invite\/([a-zA-Z0-9]+)/)
+  return match ? match[1] : null
+}
 
 interface Props {
   partner: Profile | null
@@ -131,9 +137,14 @@ function DMMessageItem({ message, senderName, isConsecutive, isSelf }: {
           </span>
         </div>
         <p className="text-discord-200 text-sm leading-relaxed break-words min-w-0">{message.content}</p>
+        {extractInviteCode(message.content) && (
+          <InviteCard code={extractInviteCode(message.content)!} />
+        )}
       </div>
     )
   }
+
+  const inviteCode = extractInviteCode(message.content)
 
   return (
     <div className="flex items-start gap-4 px-4 py-1 hover:bg-white/[0.02] group mt-2">
@@ -146,6 +157,7 @@ function DMMessageItem({ message, senderName, isConsecutive, isSelf }: {
           <span className="text-[10px] text-discord-400">{time}</span>
         </div>
         <p className="text-discord-200 text-sm leading-relaxed break-words">{message.content}</p>
+        {inviteCode && <InviteCard code={inviteCode} />}
       </div>
     </div>
   )
