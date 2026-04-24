@@ -1,4 +1,4 @@
-import { Hash, Volume2, Plus, LogOut, ChevronDown } from 'lucide-react'
+import { Hash, Volume2, Plus, LogOut, ChevronDown, UserPlus } from 'lucide-react'
 import type { Server, Channel } from '../../types'
 import { useAuthStore } from '../../stores/authStore'
 import { useToastStore } from '../../stores/toastStore'
@@ -10,9 +10,10 @@ interface Props {
   currentChannel: Channel | null
   onSelectChannel: (channel: Channel) => void
   onCreateChannel: () => void
+  onInvite: () => void
 }
 
-export default function ChannelList({ server, channels, currentChannel, onSelectChannel, onCreateChannel }: Props) {
+export default function ChannelList({ server, channels, currentChannel, onSelectChannel, onCreateChannel, onInvite }: Props) {
   const { profile, reset } = useAuthStore()
   const { show } = useToastStore()
 
@@ -31,8 +32,17 @@ export default function ChannelList({ server, channels, currentChannel, onSelect
     <div className="w-60 bg-discord-800 flex flex-col flex-shrink-0">
       {/* Server Header */}
       <div className="h-12 px-4 flex items-center justify-between border-b border-discord-900 shadow-sm cursor-pointer hover:bg-discord-700 transition-colors">
-        <span className="font-semibold text-white truncate">{server.name}</span>
-        <ChevronDown className="w-4 h-4 text-discord-300 flex-shrink-0" />
+        <span className="font-semibold text-white truncate flex-1">{server.name}</span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onInvite() }}
+            className="text-discord-300 hover:text-white transition-colors p-1"
+            title="초대 링크 만들기"
+          >
+            <UserPlus className="w-4 h-4" />
+          </button>
+          <ChevronDown className="w-4 h-4 text-discord-300 flex-shrink-0" />
+        </div>
       </div>
 
       {/* Channels */}
