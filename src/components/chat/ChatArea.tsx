@@ -33,7 +33,9 @@ export default function ChatArea({ channel, onToggleMemberList }: Props) {
 
     fetchMessages()
 
-    const ch = supabase.channel(`room:${channel.id}`)
+    const ch = supabase.channel(`room:${channel.id}`, {
+      config: { broadcast: { self: true } },
+    })
     channelRef.current = ch
 
     ch.on('broadcast', { event: 'new_message' }, ({ payload }) => {

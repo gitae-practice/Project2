@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { useAuthStore } from './stores/authStore'
 import { useServerStore } from './stores/serverStore'
@@ -33,6 +33,12 @@ export default function App() {
   const [dmPartners, setDMPartners] = useState<Profile[]>([])
   const [currentDMProfile, setCurrentDMProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [unreadDMCount, setUnreadDMCount] = useState(0)
+
+  const currentServerRef = useRef(currentServer)
+  const currentDMPartnerRef = useRef(currentDMPartner)
+  useEffect(() => { currentServerRef.current = currentServer }, [currentServer])
+  useEffect(() => { currentDMPartnerRef.current = currentDMPartner }, [currentDMPartner])
 
   useEffect(() => {
     const path = window.location.pathname
@@ -121,6 +127,22 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return
+    const sub = supabase
+      .channel('dm_notifications')
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'direct_messages',
+        filter: `receiver_id=eq.${user.id}`,
+      }, (payload) => {
+        const viewingThisDM = currentServerRef.current === null &&
+          currentDMPartnerRef.current === payload.new.sender_id
+        if (!viewingThisDM) setUnreadDMCount((prev) => prev + 1)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(sub) }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!user) return
     const fetchDMPartners = async () => {
       const { data } = await supabase
         .from('direct_messages')
@@ -161,8 +183,10 @@ export default function App() {
       <ServerList
         servers={servers}
         currentServer={currentServer}
+        unreadDMCount={unreadDMCount}
         onSelectServer={(server) => {
           setCurrentServer(server)
+          if (server === null) setUnreadDMCount(0)
           setCurrentDMPartner(null)
           setCurrentDMProfile(null)
         }}
