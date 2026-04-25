@@ -1,6 +1,5 @@
 import { Plus, MessageCircle } from 'lucide-react'
 import type { Server } from '../../types'
-import { useAuthStore } from '../../stores/authStore'
 
 interface Props {
   servers: Server[]
@@ -38,8 +37,6 @@ function ServerIcon({ server, active, onClick }: { server: Server; active: boole
 }
 
 export default function ServerList({ servers, currentServer, onSelectServer, onCreateServer }: Props) {
-  const profile = useAuthStore((s) => s.profile)
-
   return (
     <div className="w-[72px] bg-discord-900 flex flex-col items-center py-3 overflow-y-auto flex-shrink-0">
       {/* DM Button */}
@@ -86,17 +83,6 @@ export default function ServerList({ servers, currentServer, onSelectServer, onC
         </button>
       </div>
 
-      <div className="mt-auto">
-        <div className="relative group flex items-center mb-2">
-          <button className="ml-3 w-12 h-12 rounded-2xl bg-discord-700 text-discord-300 flex items-center justify-center transition-all duration-200 group-hover:rounded-xl hover:bg-discord-500 hover:text-white" title="프로필">
-            {profile?.avatar_url ? (
-              <img src={profile.avatar_url} className="w-full h-full rounded-2xl object-cover" alt="avatar" />
-            ) : (
-              <span className="text-sm font-bold">{profile?.username?.slice(0, 2).toUpperCase() ?? '?'}</span>
-            )}
-          </button>
-        </div>
-      </div>
     </div>
   )
 }

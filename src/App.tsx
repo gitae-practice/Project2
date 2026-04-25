@@ -59,7 +59,7 @@ export default function App() {
         .eq('code', code)
         .single()
       if (data?.profiles) {
-        const inviter = data.profiles as Profile
+        const inviter = data.profiles as unknown as Profile
         setDMPartners((prev) => prev.find((p) => p.id === inviter.id) ? prev : [inviter, ...prev])
         setCurrentDMPartner(inviter.id)
         setCurrentDMProfile(inviter)

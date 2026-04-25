@@ -147,7 +147,7 @@ export default function DMSidebar({ conversations, currentPartner, onSelectPartn
 
       <div className="h-14 bg-discord-900 px-2 flex items-center gap-2">
         <div className="w-8 h-8 rounded-full bg-discord-accent flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-          {profile?.username?.slice(0, 2).toUpperCase() ?? '?'}
+          {profile?.username?.slice(-2).toUpperCase() ?? '?'}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-white">{profile?.username}</p>
