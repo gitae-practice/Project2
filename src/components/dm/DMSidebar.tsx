@@ -66,11 +66,14 @@ export default function DMSidebar({ conversations, currentPartner, onSelectPartn
 
   const handleAccept = async (requestId: string, sender: Profile) => {
     await supabase.from('friend_requests').update({ status: 'accepted' }).eq('id', requestId)
+    setPending((prev) => prev.filter((r) => r.id !== requestId))
+    setFriends((prev) => prev.find((f) => f.id === sender.id) ? prev : [...prev, sender])
     show(`${sender.username}님과 친구가 되었습니다!`, 'success')
   }
 
   const handleReject = async (requestId: string) => {
     await supabase.from('friend_requests').update({ status: 'rejected' }).eq('id', requestId)
+    setPending((prev) => prev.filter((r) => r.id !== requestId))
   }
 
   const handleLogout = async () => {

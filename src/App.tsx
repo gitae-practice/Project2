@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
+import { playSound, requestNotificationPermission, showBrowserNotification } from './lib/notifications'
 import { useAuthStore } from './stores/authStore'
 import { useServerStore } from './stores/serverStore'
 import { useMessageStore } from './stores/messageStore'
@@ -39,6 +40,8 @@ export default function App() {
   const currentDMPartnerRef = useRef(currentDMPartner)
   useEffect(() => { currentServerRef.current = currentServer }, [currentServer])
   useEffect(() => { currentDMPartnerRef.current = currentDMPartner }, [currentDMPartner])
+
+  useEffect(() => { requestNotificationPermission() }, [])
 
   useEffect(() => {
     const path = window.location.pathname
@@ -132,10 +135,15 @@ export default function App() {
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'direct_messages',
         filter: `receiver_id=eq.${user.id}`,
-      }, (payload) => {
+      }, async (payload) => {
         const viewingThisDM = currentServerRef.current === null &&
           currentDMPartnerRef.current === payload.new.sender_id
-        if (!viewingThisDM) setUnreadDMCount((prev) => prev + 1)
+        if (!viewingThisDM) {
+          setUnreadDMCount((prev) => prev + 1)
+          playSound('dm')
+          const { data } = await supabase.from('profiles').select('username').eq('id', payload.new.sender_id).single()
+          showBrowserNotification(data?.username ?? '새 메시지', payload.new.content)
+        }
       })
       .subscribe()
     return () => { supabase.removeChannel(sub) }

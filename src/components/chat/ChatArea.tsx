@@ -6,6 +6,7 @@ import MessageInput from './MessageInput'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
 import { useMessageStore } from '../../stores/messageStore'
+import { playSound } from '../../lib/notifications'
 
 interface Props {
   channel: Channel | null
@@ -40,6 +41,7 @@ export default function ChatArea({ channel, onToggleMemberList }: Props) {
 
     ch.on('broadcast', { event: 'new_message' }, ({ payload }) => {
       addMessage(payload as Message)
+      if ((payload as Message).user_id !== user?.id) playSound('message')
     }).subscribe()
 
     return () => {
