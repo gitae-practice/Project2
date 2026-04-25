@@ -18,7 +18,7 @@ interface Props {
 }
 
 export default function DMArea({ partner }: Props) {
-  const { user } = useAuthStore()
+  const { user, profile } = useAuthStore()
   const { dmMessages, setDMMessages, addDMMessage } = useMessageStore()
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -90,7 +90,7 @@ export default function DMArea({ partner }: Props) {
     <div className="flex-1 flex flex-col bg-discord-700 min-w-0">
       <div className="h-12 px-4 flex items-center border-b border-discord-900/50 flex-shrink-0 gap-3">
         <div className="w-8 h-8 rounded-full bg-discord-accent flex items-center justify-center text-xs font-bold text-white">
-          {partner.username.slice(0, 2).toUpperCase()}
+          {partner.username.slice(1).toUpperCase()}
         </div>
         <span className="font-semibold text-white">{partner.username}</span>
       </div>
@@ -99,7 +99,7 @@ export default function DMArea({ partner }: Props) {
         {dmMessages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-8">
             <div className="w-20 h-20 rounded-full bg-discord-accent flex items-center justify-center text-2xl font-bold text-white mb-4">
-              {partner.username.slice(0, 2).toUpperCase()}
+              {partner.username.slice(1).toUpperCase()}
             </div>
             <h3 className="text-white font-bold text-xl mb-1">{partner.username}</h3>
             <p className="text-discord-300 text-sm"><strong>{partner.username}</strong>님과의 다이렉트 메시지 시작이에요.</p>
@@ -109,9 +109,10 @@ export default function DMArea({ partner }: Props) {
           const prev = dmMessages[i - 1]
           const isConsecutive = !!prev && prev.sender_id === msg.sender_id &&
             new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60 * 1000
-          const senderName = msg.sender_id === user?.id ? 'You' : partner.username
+          const isSelf = msg.sender_id === user?.id
+          const senderName = isSelf ? (profile?.username ?? '나') : partner.username
           return (
-            <DMMessageItem key={msg.id} message={msg} senderName={senderName} isConsecutive={isConsecutive} isSelf={msg.sender_id === user?.id} />
+            <DMMessageItem key={msg.id} message={msg} senderName={senderName} isConsecutive={isConsecutive} isSelf={isSelf} />
           )
         })}
         <div ref={bottomRef} />
@@ -126,7 +127,7 @@ function DMMessageItem({ message, senderName, isConsecutive, isSelf }: {
   message: DirectMessage; senderName: string; isConsecutive: boolean; isSelf: boolean
 }) {
   const time = format(new Date(message.created_at), 'h:mm a')
-  const initials = senderName.slice(0, 2).toUpperCase()
+  const initials = senderName.slice(1).toUpperCase()
 
   if (isConsecutive) {
     return (

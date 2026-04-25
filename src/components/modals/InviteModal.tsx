@@ -107,7 +107,7 @@ export default function InviteModal({ server, onClose }: Props) {
               {results.map((p) => (
                 <div key={p.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-discord-700 transition-colors">
                   <div className="w-8 h-8 rounded-full bg-discord-accent flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-                    {p.username.slice(0, 2).toUpperCase()}
+                    {p.username.slice(1).toUpperCase()}
                   </div>
                   <span className="flex-1 text-discord-200 text-sm font-medium">{p.username}</span>
                   <button

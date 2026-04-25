@@ -8,7 +8,7 @@ interface Props {
 
 export default function MessageItem({ message, isConsecutive }: Props) {
   const username = message.profile?.username ?? 'Unknown'
-  const initials = username.slice(0, 2).toUpperCase()
+  const initials = username.slice(1).toUpperCase()
   const time = format(new Date(message.created_at), 'h:mm a')
   const fullDate = format(new Date(message.created_at), 'MMM d, yyyy h:mm a')
 

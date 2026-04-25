@@ -36,7 +36,7 @@ export default function MemberList({ members }: Props) {
 
 function MemberItem({ member, isOnline }: { member: ServerMember; isOnline: boolean }) {
   const username = member.profile?.username ?? 'Unknown'
-  const initials = username.slice(0, 2).toUpperCase()
+  const initials = username.slice(1).toUpperCase()
 
   return (
     <div className="flex items-center gap-3 px-4 py-1.5 mx-2 rounded-md hover:bg-discord-700 cursor-pointer transition-colors group">

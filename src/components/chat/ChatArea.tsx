@@ -16,6 +16,7 @@ export default function ChatArea({ channel, onToggleMemberList }: Props) {
   const { user } = useAuthStore()
   const { messages, setMessages, addMessage } = useMessageStore()
   const bottomRef = useRef<HTMLDivElement>(null)
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   useEffect(() => {
     if (!channel) return
@@ -32,21 +33,17 @@ export default function ChatArea({ channel, onToggleMemberList }: Props) {
 
     fetchMessages()
 
-    const sub = supabase
-      .channel(`messages:${channel.id}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `channel_id=eq.${channel.id}` },
-        async (payload) => {
-          const { data } = await supabase
-            .from('profiles')
-            .select('id, username, avatar_url')
-            .eq('id', payload.new.user_id)
-            .single()
-          addMessage({ ...payload.new, profile: data } as Message)
-        }
-      )
-      .subscribe()
+    const ch = supabase.channel(`room:${channel.id}`)
+    channelRef.current = ch
 
-    return () => { supabase.removeChannel(sub) }
+    ch.on('broadcast', { event: 'new_message' }, ({ payload }) => {
+      addMessage(payload as Message)
+    }).subscribe()
+
+    return () => {
+      supabase.removeChannel(ch)
+      channelRef.current = null
+    }
   }, [channel?.id])
 
   useEffect(() => {
@@ -55,11 +52,18 @@ export default function ChatArea({ channel, onToggleMemberList }: Props) {
 
   const handleSend = async (content: string) => {
     if (!channel || !user) return
-    await supabase.from('messages').insert({
-      channel_id: channel.id,
-      user_id: user.id,
-      content,
-    })
+    const { data } = await supabase
+      .from('messages')
+      .insert({ channel_id: channel.id, user_id: user.id, content })
+      .select('*, profile:profiles(id, username, avatar_url)')
+      .single()
+    if (data && channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'new_message',
+        payload: data,
+      })
+    }
   }
 
   if (!channel) {
@@ -75,7 +79,6 @@ export default function ChatArea({ channel, onToggleMemberList }: Props) {
 
   return (
     <div className="flex-1 flex flex-col bg-discord-700 min-w-0">
-      {/* Header */}
       <div className="h-12 px-4 flex items-center justify-between border-b border-discord-900/50 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Hash className="w-5 h-5 text-discord-400" />
@@ -86,8 +89,6 @@ export default function ChatArea({ channel, onToggleMemberList }: Props) {
         </button>
       </div>
 
-
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto py-4">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-8">

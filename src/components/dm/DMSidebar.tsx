@@ -106,7 +106,7 @@ export default function DMSidebar({ conversations, currentPartner, onSelectPartn
             {pending.map((req) => (
               <div key={req.id} className="flex items-center gap-2 px-2 mx-2 py-2 rounded-md" style={{ width: 'calc(100% - 16px)' }}>
                 <div className="w-8 h-8 rounded-full bg-discord-accent flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-                  {req.sender.username.slice(0, 2).toUpperCase()}
+                  {req.sender.username.slice(1).toUpperCase()}
                 </div>
                 <span className="flex-1 text-discord-200 text-sm truncate">{req.sender.username}</span>
                 <button onClick={() => handleAccept(req.id, req.sender)} className="text-discord-green hover:text-white transition-colors p-0.5" title="수락">
@@ -177,7 +177,7 @@ function PartnerButton({ partner, active, onClick }: { partner: Profile; active:
     >
       <div className="relative flex-shrink-0">
         <div className="w-8 h-8 rounded-full bg-discord-accent flex items-center justify-center text-xs font-bold text-white">
-          {partner.username.slice(0, 2).toUpperCase()}
+          {partner.username.slice(1).toUpperCase()}
         </div>
         <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-discord-800 bg-discord-green" />
       </div>
