@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
 import { playSound, unlockAudio, requestNotificationPermission, showBrowserNotification } from './lib/notifications'
 import { useAuthStore } from './stores/authStore'
@@ -35,11 +35,24 @@ export default function App() {
   const [currentDMProfile, setCurrentDMProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [unreadDMCount, setUnreadDMCount] = useState(0)
+  const [unreadChannels, setUnreadChannels] = useState<Record<string, number>>({})
+  const [channelServerMap, setChannelServerMap] = useState<Record<string, string>>({})
 
   const currentServerRef = useRef(currentServer)
   const currentDMPartnerRef = useRef(currentDMPartner)
+  const currentChannelRef = useRef(currentChannel)
   useEffect(() => { currentServerRef.current = currentServer }, [currentServer])
   useEffect(() => { currentDMPartnerRef.current = currentDMPartner }, [currentDMPartner])
+  useEffect(() => { currentChannelRef.current = currentChannel }, [currentChannel])
+
+  const unreadServers = useMemo(() => {
+    const result: Record<string, number> = {}
+    for (const [chId, count] of Object.entries(unreadChannels)) {
+      const serverId = channelServerMap[chId]
+      if (serverId) result[serverId] = (result[serverId] ?? 0) + count
+    }
+    return result
+  }, [unreadChannels, channelServerMap])
 
   useEffect(() => { requestNotificationPermission() }, [])
   useEffect(() => {
@@ -137,6 +150,46 @@ export default function App() {
   }, [currentServer?.id])
 
   useEffect(() => {
+    if (!servers.length) return
+    supabase.from('channels').select('id, server_id')
+      .in('server_id', servers.map((s) => s.id))
+      .then(({ data }) => {
+        if (data) setChannelServerMap((prev) => {
+          const next = { ...prev }
+          data.forEach((ch: any) => { next[ch.id] = ch.server_id })
+          return next
+        })
+      })
+  }, [servers.length])
+
+  useEffect(() => {
+    if (!user) return
+    const sub = supabase
+      .channel('channel_notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        if (payload.new.user_id === user.id) return
+        const chId = payload.new.channel_id
+        const isViewing = currentServerRef.current !== null && currentChannelRef.current?.id === chId
+        if (!isViewing) {
+          setUnreadChannels((prev) => ({ ...prev, [chId]: (prev[chId] ?? 0) + 1 }))
+          playSound('message')
+        }
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(sub) }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!currentChannel) return
+    setUnreadChannels((prev) => {
+      if (!prev[currentChannel.id]) return prev
+      const next = { ...prev }
+      delete next[currentChannel.id]
+      return next
+    })
+  }, [currentChannel?.id])
+
+  useEffect(() => {
     if (!user) return
     const sub = supabase
       .channel('dm_notifications')
@@ -200,6 +253,7 @@ export default function App() {
         servers={servers}
         currentServer={currentServer}
         unreadDMCount={unreadDMCount}
+        unreadServers={unreadServers}
         onSelectServer={(server) => {
           setCurrentServer(server)
           if (server === null) setUnreadDMCount(0)
@@ -215,6 +269,7 @@ export default function App() {
             server={currentServer}
             channels={channels}
             currentChannel={currentChannel}
+            unreadChannels={unreadChannels}
             onSelectChannel={setCurrentChannel}
             onCreateChannel={() => setShowCreateChannel(true)}
             onInvite={() => setShowInvite(true)}

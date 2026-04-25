@@ -5,11 +5,21 @@ interface Props {
   servers: Server[]
   currentServer: Server | null
   unreadDMCount: number
+  unreadServers: Record<string, number>
   onSelectServer: (server: Server | null) => void
   onCreateServer: () => void
 }
 
-function ServerIcon({ server, active, onClick }: { server: Server; active: boolean; onClick: () => void }) {
+function Badge({ count }: { count: number }) {
+  if (count <= 0) return null
+  return (
+    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 pointer-events-none">
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
+
+function ServerIcon({ server, active, unreadCount, onClick }: { server: Server; active: boolean; unreadCount: number; onClick: () => void }) {
   const initials = server.name.slice(0, 2).toUpperCase()
   return (
     <div className="relative group flex items-center mb-2">
@@ -18,26 +28,29 @@ function ServerIcon({ server, active, onClick }: { server: Server; active: boole
           active ? 'h-9' : 'h-4 opacity-0 group-hover:opacity-100 group-hover:h-5'
         }`}
       />
-      <button
-        onClick={onClick}
-        className={`ml-3 w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-sm transition-all duration-200 group-hover:rounded-xl ${
-          active
-            ? 'bg-discord-accent text-white rounded-xl'
-            : 'bg-discord-700 text-discord-200 hover:bg-discord-accent hover:text-white'
-        }`}
-        title={server.name}
-      >
-        {server.icon_url ? (
-          <img src={server.icon_url} alt={server.name} className="w-full h-full rounded-inherit object-cover" />
-        ) : (
-          initials
-        )}
-      </button>
+      <div className="relative ml-3">
+        <button
+          onClick={onClick}
+          className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-sm transition-all duration-200 group-hover:rounded-xl ${
+            active
+              ? 'bg-discord-accent text-white rounded-xl'
+              : 'bg-discord-700 text-discord-200 hover:bg-discord-accent hover:text-white'
+          }`}
+          title={server.name}
+        >
+          {server.icon_url ? (
+            <img src={server.icon_url} alt={server.name} className="w-full h-full rounded-inherit object-cover" />
+          ) : (
+            initials
+          )}
+        </button>
+        <Badge count={unreadCount} />
+      </div>
     </div>
   )
 }
 
-export default function ServerList({ servers, currentServer, unreadDMCount, onSelectServer, onCreateServer }: Props) {
+export default function ServerList({ servers, currentServer, unreadDMCount, unreadServers, onSelectServer, onCreateServer }: Props) {
   return (
     <div className="w-[72px] bg-discord-900 flex flex-col items-center py-3 overflow-y-auto flex-shrink-0">
       {/* DM Button */}
@@ -59,11 +72,7 @@ export default function ServerList({ servers, currentServer, unreadDMCount, onSe
           >
             <MessageCircle className="w-6 h-6" />
           </button>
-          {unreadDMCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1 pointer-events-none">
-              {unreadDMCount > 99 ? '99+' : unreadDMCount}
-            </span>
-          )}
+          <Badge count={unreadDMCount} />
         </div>
       </div>
 
@@ -74,6 +83,7 @@ export default function ServerList({ servers, currentServer, unreadDMCount, onSe
           key={server.id}
           server={server}
           active={currentServer?.id === server.id}
+          unreadCount={unreadServers[server.id] ?? 0}
           onClick={() => onSelectServer(server)}
         />
       ))}
