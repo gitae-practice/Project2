@@ -1,21 +1,35 @@
-export function playSound(type: 'dm' | 'message' = 'dm') {
+let _ctx: AudioContext | null = null
+
+function getCtx(): AudioContext | null {
   try {
-    const ctx = new AudioContext()
+    if (!_ctx) _ctx = new AudioContext()
+    return _ctx
+  } catch {
+    return null
+  }
+}
+
+export function unlockAudio() {
+  const ctx = getCtx()
+  if (ctx && ctx.state === 'suspended') ctx.resume()
+}
+
+function _play(ctx: AudioContext, type: 'dm' | 'message') {
+  try {
     const gain = ctx.createGain()
     gain.connect(ctx.destination)
 
     if (type === 'dm') {
-      const freqs = [660, 880]
-      freqs.forEach((freq, i) => {
+      [660, 880].forEach((freq, i) => {
         const osc = ctx.createOscillator()
         osc.connect(gain)
         osc.frequency.value = freq
         osc.type = 'sine'
-        const start = ctx.currentTime + i * 0.15
-        gain.gain.setValueAtTime(0.18, start)
-        gain.gain.exponentialRampToValueAtTime(0.001, start + 0.25)
-        osc.start(start)
-        osc.stop(start + 0.25)
+        const t = ctx.currentTime + i * 0.15
+        gain.gain.setValueAtTime(0.18, t)
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25)
+        osc.start(t)
+        osc.stop(t + 0.25)
       })
     } else {
       const osc = ctx.createOscillator()
@@ -28,6 +42,16 @@ export function playSound(type: 'dm' | 'message' = 'dm') {
       osc.stop(ctx.currentTime + 0.2)
     }
   } catch {}
+}
+
+export function playSound(type: 'dm' | 'message' = 'dm') {
+  const ctx = getCtx()
+  if (!ctx) return
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(() => _play(ctx, type)).catch(() => {})
+  } else {
+    _play(ctx, type)
+  }
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {

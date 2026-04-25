@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './lib/supabase'
-import { playSound, requestNotificationPermission, showBrowserNotification } from './lib/notifications'
+import { playSound, unlockAudio, requestNotificationPermission, showBrowserNotification } from './lib/notifications'
 import { useAuthStore } from './stores/authStore'
 import { useServerStore } from './stores/serverStore'
 import { useMessageStore } from './stores/messageStore'
@@ -42,6 +42,14 @@ export default function App() {
   useEffect(() => { currentDMPartnerRef.current = currentDMPartner }, [currentDMPartner])
 
   useEffect(() => { requestNotificationPermission() }, [])
+  useEffect(() => {
+    document.addEventListener('click', unlockAudio)
+    document.addEventListener('keydown', unlockAudio)
+    return () => {
+      document.removeEventListener('click', unlockAudio)
+      document.removeEventListener('keydown', unlockAudio)
+    }
+  }, [])
 
   useEffect(() => {
     const path = window.location.pathname
