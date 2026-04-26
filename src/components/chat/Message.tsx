@@ -1,6 +1,29 @@
 import { format } from 'date-fns'
 import type { Message as MessageType } from '../../types'
 
+function isImageUrl(content: string): boolean {
+  try {
+    const url = new URL(content)
+    return /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url.pathname)
+  } catch {
+    return false
+  }
+}
+
+function MessageContent({ content }: { content: string }) {
+  if (isImageUrl(content)) {
+    return (
+      <img
+        src={content}
+        alt="첨부 이미지"
+        className="max-w-xs max-h-64 rounded-lg mt-1 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+        onClick={() => window.open(content, '_blank')}
+      />
+    )
+  }
+  return <p className="text-discord-200 text-sm leading-relaxed break-words">{content}</p>
+}
+
 interface Props {
   message: MessageType
   isConsecutive: boolean
@@ -20,7 +43,9 @@ export default function MessageItem({ message, isConsecutive }: Props) {
             {format(new Date(message.created_at), 'h:mm')}
           </span>
         </div>
-        <p className="text-discord-200 text-sm leading-relaxed break-words min-w-0">{message.content}</p>
+        <div className="min-w-0">
+          <MessageContent content={message.content} />
+        </div>
       </div>
     )
   }
@@ -36,7 +61,7 @@ export default function MessageItem({ message, isConsecutive }: Props) {
           <span className="text-[10px] text-discord-400" title={fullDate}>{time}</span>
           {message.is_edited && <span className="text-[10px] text-discord-400">(edited)</span>}
         </div>
-        <p className="text-discord-200 text-sm leading-relaxed break-words">{message.content}</p>
+        <MessageContent content={message.content} />
       </div>
     </div>
   )

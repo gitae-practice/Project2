@@ -13,6 +13,15 @@ function extractInviteCode(content: string): string | null {
   return match ? match[1] : null
 }
 
+function isImageUrl(content: string): boolean {
+  try {
+    const url = new URL(content)
+    return /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url.pathname)
+  } catch {
+    return false
+  }
+}
+
 interface Props {
   partner: Profile | null
 }
@@ -137,7 +146,11 @@ function DMMessageItem({ message, senderName, isConsecutive, isSelf }: {
             {format(new Date(message.created_at), 'h:mm')}
           </span>
         </div>
-        <p className="text-discord-200 text-sm leading-relaxed break-words min-w-0">{message.content}</p>
+        {isImageUrl(message.content) ? (
+          <img src={message.content} alt="첨부 이미지" className="max-w-xs max-h-64 rounded-lg mt-1 object-contain cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.open(message.content, '_blank')} />
+        ) : (
+          <p className="text-discord-200 text-sm leading-relaxed break-words min-w-0">{message.content}</p>
+        )}
         {extractInviteCode(message.content) && (
           <InviteCard code={extractInviteCode(message.content)!} />
         )}
@@ -157,7 +170,11 @@ function DMMessageItem({ message, senderName, isConsecutive, isSelf }: {
           <span className="font-semibold text-white text-sm">{senderName}</span>
           <span className="text-[10px] text-discord-400">{time}</span>
         </div>
-        <p className="text-discord-200 text-sm leading-relaxed break-words">{message.content}</p>
+        {isImageUrl(message.content) ? (
+          <img src={message.content} alt="첨부 이미지" className="max-w-xs max-h-64 rounded-lg mt-1 object-contain cursor-pointer hover:opacity-90 transition-opacity" onClick={() => window.open(message.content, '_blank')} />
+        ) : (
+          <p className="text-discord-200 text-sm leading-relaxed break-words">{message.content}</p>
+        )}
         {inviteCode && <InviteCard code={inviteCode} />}
       </div>
     </div>
