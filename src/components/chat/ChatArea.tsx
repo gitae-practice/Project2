@@ -76,11 +76,13 @@ export default function ChatArea({ channel, onToggleMemberList }: Props) {
   }
 
   const handleEditMessage = async (id: string, content: string) => {
+    editMessage(id, content)
     await supabase.from('messages').update({ content, is_edited: true }).eq('id', id)
     channelRef.current?.send({ type: 'broadcast', event: 'edit_message', payload: { id, content } })
   }
 
   const handleDeleteMessage = async (id: string) => {
+    removeMessage(id)
     await supabase.from('messages').delete().eq('id', id)
     channelRef.current?.send({ type: 'broadcast', event: 'delete_message', payload: { id } })
   }

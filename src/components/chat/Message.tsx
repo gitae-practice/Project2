@@ -16,6 +16,10 @@ export function isImageUrl(content: string): boolean {
 function ImageMessage({ src }: { src: string }) {
   const [retryKey, setRetryKey] = useState(0)
   const retryCount = useRef(0)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current) }, [])
+
   return (
     <img
       key={retryKey}
@@ -26,7 +30,7 @@ function ImageMessage({ src }: { src: string }) {
       onError={() => {
         if (retryCount.current < 4) {
           retryCount.current++
-          setTimeout(() => setRetryKey((k) => k + 1), 800)
+          timerRef.current = setTimeout(() => setRetryKey((k) => k + 1), 800)
         }
       }}
     />

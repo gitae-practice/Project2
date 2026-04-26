@@ -22,6 +22,7 @@ export default function DMArea({ partner }: Props) {
   const { user, profile } = useAuthStore()
   const { dmMessages, setDMMessages, addDMMessage, editDMMessage, removeDMMessage } = useMessageStore()
   const bottomRef = useRef<HTMLDivElement>(null)
+  const dmChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
   useEffect(() => {
     if (!partner || !user) return
@@ -39,8 +40,8 @@ export default function DMArea({ partner }: Props) {
     fetchMessages()
 
     const channelKey = [user.id, partner.id].sort().join('-')
-    const sub = supabase
-      .channel(`dm:${channelKey}`)
+    const ch = supabase
+      .channel(`dm:${channelKey}`, { config: { broadcast: { self: false } } })
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'direct_messages',
         filter: `sender_id=eq.${partner.id}`,
@@ -50,19 +51,16 @@ export default function DMArea({ partner }: Props) {
           addDMMessage({ ...payload.new, sender: data } as DirectMessage)
         }
       })
-      .on('postgres_changes', {
-        event: 'UPDATE', schema: 'public', table: 'direct_messages',
-      }, (payload) => {
-        editDMMessage(payload.new.id, payload.new.content)
+      .on('broadcast', { event: 'edit_dm' }, ({ payload }) => {
+        editDMMessage(payload.id, payload.content)
       })
-      .on('postgres_changes', {
-        event: 'DELETE', schema: 'public', table: 'direct_messages',
-      }, (payload) => {
-        if (payload.old.id) removeDMMessage(payload.old.id)
+      .on('broadcast', { event: 'delete_dm' }, ({ payload }) => {
+        removeDMMessage(payload.id)
       })
       .subscribe()
 
-    return () => { supabase.removeChannel(sub) }
+    dmChannelRef.current = ch
+    return () => { supabase.removeChannel(ch); dmChannelRef.current = null }
   }, [partner?.id])
 
   useEffect(() => {
@@ -91,11 +89,13 @@ export default function DMArea({ partner }: Props) {
   const handleEditDM = async (id: string, content: string) => {
     editDMMessage(id, content)
     await supabase.from('direct_messages').update({ content }).eq('id', id)
+    dmChannelRef.current?.send({ type: 'broadcast', event: 'edit_dm', payload: { id, content } })
   }
 
   const handleDeleteDM = async (id: string) => {
     removeDMMessage(id)
     await supabase.from('direct_messages').delete().eq('id', id)
+    dmChannelRef.current?.send({ type: 'broadcast', event: 'delete_dm', payload: { id } })
   }
 
   if (!partner) {
