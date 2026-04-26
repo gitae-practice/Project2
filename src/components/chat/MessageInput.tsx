@@ -2,6 +2,7 @@ import { useRef, useState, type KeyboardEvent } from 'react'
 import { Send, PlusCircle, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../stores/authStore'
+import { useToastStore } from '../../stores/toastStore'
 
 interface Props {
   placeholder: string
@@ -10,6 +11,7 @@ interface Props {
 
 export default function MessageInput({ placeholder, onSend }: Props) {
   const { user } = useAuthStore()
+  const { show } = useToastStore()
   const [value, setValue] = useState('')
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<{ file: File; objectUrl: string } | null>(null)
@@ -43,7 +45,9 @@ export default function MessageInput({ placeholder, onSend }: Props) {
       const ext = preview.file.name.split('.').pop() ?? 'png'
       const path = `${user.id}/${Date.now()}.${ext}`
       const { error } = await supabase.storage.from('chat-images').upload(path, preview.file)
-      if (!error) {
+      if (error) {
+        show(`이미지 업로드 실패: ${error.message}`, 'error')
+      } else {
         const { data } = supabase.storage.from('chat-images').getPublicUrl(path)
         onSend(data.publicUrl)
       }
