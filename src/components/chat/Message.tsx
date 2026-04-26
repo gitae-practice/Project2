@@ -1,26 +1,39 @@
+import { useRef, useState } from 'react'
 import { format } from 'date-fns'
 import type { Message as MessageType } from '../../types'
 
-function isImageUrl(content: string): boolean {
+export function isImageUrl(content: string): boolean {
+  if (!content.startsWith('https://')) return false
   try {
     const url = new URL(content)
-    return /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url.pathname)
+    return /\.(jpg|jpeg|png|gif|webp|svg|heic|bmp)(\?.*)?$/i.test(url.pathname)
   } catch {
     return false
   }
 }
 
+function ImageMessage({ src }: { src: string }) {
+  const [retryKey, setRetryKey] = useState(0)
+  const retryCount = useRef(0)
+  return (
+    <img
+      key={retryKey}
+      src={src}
+      alt="첨부 이미지"
+      className="max-w-xs max-h-64 rounded-lg mt-1 object-contain cursor-pointer hover:opacity-90 transition-opacity"
+      onClick={() => window.open(src, '_blank')}
+      onError={() => {
+        if (retryCount.current < 4) {
+          retryCount.current++
+          setTimeout(() => setRetryKey((k) => k + 1), 800)
+        }
+      }}
+    />
+  )
+}
+
 function MessageContent({ content }: { content: string }) {
-  if (isImageUrl(content)) {
-    return (
-      <img
-        src={content}
-        alt="첨부 이미지"
-        className="max-w-xs max-h-64 rounded-lg mt-1 object-contain cursor-pointer hover:opacity-90 transition-opacity"
-        onClick={() => window.open(content, '_blank')}
-      />
-    )
-  }
+  if (isImageUrl(content)) return <ImageMessage src={content} />
   return <p className="text-discord-200 text-sm leading-relaxed break-words">{content}</p>
 }
 

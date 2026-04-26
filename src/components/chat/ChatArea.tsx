@@ -52,6 +52,8 @@ export default function ChatArea({ channel, onToggleMemberList }: Props) {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const t = setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 900)
+    return () => clearTimeout(t)
   }, [messages])
 
   const handleSend = async (content: string) => {

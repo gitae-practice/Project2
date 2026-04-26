@@ -7,19 +7,11 @@ import { useMessageStore } from '../../stores/messageStore'
 import { supabase } from '../../lib/supabase'
 import MessageInput from '../chat/MessageInput'
 import InviteCard from './InviteCard'
+import { isImageUrl } from '../chat/Message'
 
 function extractInviteCode(content: string): string | null {
   const match = content.match(/\/invite\/([a-zA-Z0-9]+)/)
   return match ? match[1] : null
-}
-
-function isImageUrl(content: string): boolean {
-  try {
-    const url = new URL(content)
-    return /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(url.pathname)
-  } catch {
-    return false
-  }
 }
 
 interface Props {
@@ -65,6 +57,8 @@ export default function DMArea({ partner }: Props) {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const t = setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 900)
+    return () => clearTimeout(t)
   }, [dmMessages])
 
   const handleSend = async (content: string) => {
