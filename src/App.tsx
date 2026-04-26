@@ -229,12 +229,10 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return
-    const sub = supabase.channel('kick_watch')
-      .on('postgres_changes', {
-        event: 'DELETE', schema: 'public', table: 'server_members',
-        filter: `user_id=eq.${user.id}`,
-      }, (payload) => {
-        const serverId = payload.old.server_id
+    const sub = supabase
+      .channel(`kicks:${user.id}`)
+      .on('broadcast', { event: 'kick' }, ({ payload }) => {
+        const serverId = payload.server_id as string
         setServers(useServerStore.getState().servers.filter((s) => s.id !== serverId))
         if (currentServerRef.current?.id === serverId) setCurrentServer(null)
       })
@@ -281,6 +279,11 @@ export default function App() {
     await supabase.from('server_members').delete().eq('server_id', currentServer.id).eq('user_id', userId)
     setMembers(members.filter((m) => m.user_id !== userId))
     show(`${name}님을 강퇴했습니다.`, 'info')
+    await supabase.channel(`kicks:${userId}`).send({
+      type: 'broadcast',
+      event: 'kick',
+      payload: { server_id: currentServer.id },
+    })
   }
 
   const handleDeleteConversation = (partnerId: string) => {

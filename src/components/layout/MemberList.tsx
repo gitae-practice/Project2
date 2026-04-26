@@ -131,7 +131,6 @@ function MemberItem({ member, isOnline, canKick, isFriend, isPending, isSelf, on
   }
 
   const showButtons = hovered && !isSelf
-  const hasButtons = !isSelf || canKick
 
   return (
     <div

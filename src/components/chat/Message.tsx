@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { format } from 'date-fns'
 import { Pencil, Trash2 } from 'lucide-react'
 import type { Message as MessageType } from '../../types'
