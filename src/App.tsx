@@ -335,6 +335,11 @@ export default function App() {
               currentUserId={user.id}
               isOwner={currentServer?.owner_id === user.id}
               onKick={handleKickMember}
+              onOpenDM={(member) => {
+                if (!member.profile) return
+                setCurrentServer(null)
+                handleSelectDMPartner(member.profile as any)
+              }}
             />
           )}
         </>

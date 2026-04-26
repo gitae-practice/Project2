@@ -40,8 +40,9 @@ export default function DMArea({ partner }: Props) {
     fetchMessages()
 
     const channelKey = [user.id, partner.id].sort().join('-')
-    const ch = supabase
-      .channel(`dm:${channelKey}`, { config: { broadcast: { self: false } } })
+
+    const pgSub = supabase
+      .channel(`dm:${channelKey}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'direct_messages',
         filter: `sender_id=eq.${partner.id}`,
@@ -51,6 +52,10 @@ export default function DMArea({ partner }: Props) {
           addDMMessage({ ...payload.new, sender: data } as DirectMessage)
         }
       })
+      .subscribe()
+
+    const bcastCh = supabase
+      .channel(`dm-edit:${channelKey}`)
       .on('broadcast', { event: 'edit_dm' }, ({ payload }) => {
         editDMMessage(payload.id, payload.content)
       })
@@ -59,8 +64,12 @@ export default function DMArea({ partner }: Props) {
       })
       .subscribe()
 
-    dmChannelRef.current = ch
-    return () => { supabase.removeChannel(ch); dmChannelRef.current = null }
+    dmChannelRef.current = bcastCh
+    return () => {
+      supabase.removeChannel(pgSub)
+      supabase.removeChannel(bcastCh)
+      dmChannelRef.current = null
+    }
   }, [partner?.id])
 
   useEffect(() => {
