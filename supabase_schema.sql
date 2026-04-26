@@ -1,7 +1,7 @@
 -- profiles
 create table profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  username text not null unique,
+  username text not null,
   avatar_url text,
   created_at timestamptz default now()
 );
@@ -102,6 +102,10 @@ create policy "Channel members can send messages" on messages for insert with ch
     where c.id = messages.channel_id and sm.user_id = auth.uid()
   )
 );
+create policy "Users can update their own messages" on messages
+  for update using (auth.uid() = user_id);
+create policy "Users can delete their own messages" on messages
+  for delete using (auth.uid() = user_id);
 
 -- direct_messages 정책
 create policy "DMs viewable by participants" on direct_messages for select using (
@@ -110,6 +114,17 @@ create policy "DMs viewable by participants" on direct_messages for select using
 create policy "Authenticated users can send DMs" on direct_messages for insert with check (
   auth.uid() = sender_id
 );
+create policy "Users can update their own DMs" on direct_messages
+  for update using (auth.uid() = sender_id);
+create policy "Users can delete their own DMs" on direct_messages
+  for delete using (auth.uid() = sender_id or auth.uid() = receiver_id);
+
+-- server_members 강퇴/탈퇴 정책
+create policy "Server owners can remove members" on server_members
+  for delete using (
+    exists (select 1 from servers where id = server_members.server_id and owner_id = auth.uid())
+    or auth.uid() = user_id
+  );
 
 -- Realtime 활성화
 alter publication supabase_realtime add table messages;
