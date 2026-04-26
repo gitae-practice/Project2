@@ -4,6 +4,7 @@ import { playSound, unlockAudio, requestNotificationPermission, showBrowserNotif
 import { useAuthStore } from './stores/authStore'
 import { useServerStore } from './stores/serverStore'
 import { useMessageStore } from './stores/messageStore'
+import { useToastStore } from './stores/toastStore'
 import type { Profile, Server, Channel, ServerMember } from './types'
 import AuthPage from './components/auth/AuthPage'
 import ServerList from './components/layout/ServerList'
@@ -26,6 +27,8 @@ export default function App() {
   } = useServerStore()
   const { setCurrentDMPartner, currentDMPartner } = useMessageStore()
 
+  const { show } = useToastStore()
+
   const [showMemberList, setShowMemberList] = useState(true)
   const [showCreateServer, setShowCreateServer] = useState(false)
   const [showCreateChannel, setShowCreateChannel] = useState(false)
@@ -37,6 +40,7 @@ export default function App() {
   const [unreadDMCount, setUnreadDMCount] = useState(0)
   const [unreadChannels, setUnreadChannels] = useState<Record<string, number>>({})
   const [channelServerMap, setChannelServerMap] = useState<Record<string, string>>({})
+  const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set())
 
   const currentServerRef = useRef(currentServer)
   const currentDMPartnerRef = useRef(currentDMPartner)
@@ -212,6 +216,34 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return
+    const ch = supabase.channel('presence:global', {
+      config: { presence: { key: user.id } },
+    })
+    ch.on('presence', { event: 'sync' }, () => {
+      setOnlineUserIds(new Set(Object.keys(ch.presenceState())))
+    }).subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') await ch.track({ user_id: user.id })
+    })
+    return () => { supabase.removeChannel(ch) }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!user) return
+    const sub = supabase.channel('kick_watch')
+      .on('postgres_changes', {
+        event: 'DELETE', schema: 'public', table: 'server_members',
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        const serverId = payload.old.server_id
+        setServers(useServerStore.getState().servers.filter((s) => s.id !== serverId))
+        if (currentServerRef.current?.id === serverId) setCurrentServer(null)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(sub) }
+  }, [user?.id])
+
+  useEffect(() => {
+    if (!user) return
     const fetchDMPartners = async () => {
       const { data } = await supabase
         .from('direct_messages')
@@ -240,6 +272,24 @@ export default function App() {
   }
 
   if (!user) return <AuthPage />
+
+  const handleKickMember = async (userId: string) => {
+    if (!currentServer) return
+    const member = members.find((m) => m.user_id === userId)
+    const name = member?.profile?.username ?? '이 멤버'
+    if (!window.confirm(`${name}님을 서버에서 강퇴하시겠습니까?`)) return
+    await supabase.from('server_members').delete().eq('server_id', currentServer.id).eq('user_id', userId)
+    setMembers(members.filter((m) => m.user_id !== userId))
+    show(`${name}님을 강퇴했습니다.`, 'info')
+  }
+
+  const handleDeleteConversation = (partnerId: string) => {
+    setDMPartners((prev) => prev.filter((p) => p.id !== partnerId))
+    if (currentDMPartner === partnerId) {
+      setCurrentDMPartner(null)
+      setCurrentDMProfile(null)
+    }
+  }
 
   const handleSelectDMPartner = (partner: Profile) => {
     setCurrentDMPartner(partner.id)
@@ -278,14 +328,24 @@ export default function App() {
             channel={currentChannel}
             onToggleMemberList={() => setShowMemberList((v) => !v)}
           />
-          {showMemberList && <MemberList members={members} />}
+          {showMemberList && (
+            <MemberList
+              members={members}
+              onlineUserIds={onlineUserIds}
+              currentUserId={user.id}
+              isOwner={currentServer?.owner_id === user.id}
+              onKick={handleKickMember}
+            />
+          )}
         </>
       ) : (
         <>
           <DMSidebar
             conversations={dmPartners}
             currentPartner={currentDMPartner}
+            onlineUserIds={onlineUserIds}
             onSelectPartner={handleSelectDMPartner}
+            onDeleteConversation={handleDeleteConversation}
           />
           <DMArea partner={currentDMProfile} />
         </>

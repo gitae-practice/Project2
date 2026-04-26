@@ -14,10 +14,12 @@ interface PendingRequest {
 interface Props {
   conversations: Profile[]
   currentPartner: string | null
+  onlineUserIds: Set<string>
   onSelectPartner: (partner: Profile) => void
+  onDeleteConversation: (partnerId: string) => void
 }
 
-export default function DMSidebar({ conversations, currentPartner, onSelectPartner }: Props) {
+export default function DMSidebar({ conversations, currentPartner, onlineUserIds, onSelectPartner, onDeleteConversation }: Props) {
   const { user, profile, reset } = useAuthStore()
   const { show } = useToastStore()
   const [friends, setFriends] = useState<Profile[]>([])
@@ -76,6 +78,25 @@ export default function DMSidebar({ conversations, currentPartner, onSelectPartn
     setPending((prev) => prev.filter((r) => r.id !== requestId))
   }
 
+  const handleDeleteFriend = async (friend: Profile) => {
+    if (!user) return
+    await supabase.from('friend_requests')
+      .delete()
+      .or(`and(sender_id.eq.${user.id},receiver_id.eq.${friend.id}),and(sender_id.eq.${friend.id},receiver_id.eq.${user.id})`)
+    setFriends((prev) => prev.filter((f) => f.id !== friend.id))
+    onDeleteConversation(friend.id)
+    show(`${friend.username}님과 친구를 끊었습니다.`, 'info')
+  }
+
+  const handleDeleteDM = async (partner: Profile) => {
+    if (!user) return
+    await supabase.from('direct_messages')
+      .delete()
+      .or(`and(sender_id.eq.${user.id},receiver_id.eq.${partner.id}),and(sender_id.eq.${partner.id},receiver_id.eq.${user.id})`)
+    onDeleteConversation(partner.id)
+    show('대화가 삭제되었습니다.', 'info')
+  }
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     reset()
@@ -129,7 +150,14 @@ export default function DMSidebar({ conversations, currentPartner, onSelectPartn
               친구 — {friends.length}
             </p>
             {friends.map((f) => (
-              <PartnerButton key={f.id} partner={f} active={currentPartner === f.id} onClick={() => onSelectPartner(f)} />
+              <PartnerButton
+                key={f.id}
+                partner={f}
+                active={currentPartner === f.id}
+                isOnline={onlineUserIds.has(f.id)}
+                onClick={() => onSelectPartner(f)}
+                onDelete={() => handleDeleteFriend(f)}
+              />
             ))}
           </div>
         )}
@@ -143,7 +171,14 @@ export default function DMSidebar({ conversations, currentPartner, onSelectPartn
             </div>
           )}
           {dmOnlyPartners.map((p) => (
-            <PartnerButton key={p.id} partner={p} active={currentPartner === p.id} onClick={() => onSelectPartner(p)} />
+            <PartnerButton
+              key={p.id}
+              partner={p}
+              active={currentPartner === p.id}
+              isOnline={onlineUserIds.has(p.id)}
+              onClick={() => onSelectPartner(p)}
+              onDelete={() => handleDeleteDM(p)}
+            />
           ))}
         </div>
       </div>
@@ -169,22 +204,37 @@ export default function DMSidebar({ conversations, currentPartner, onSelectPartn
   )
 }
 
-function PartnerButton({ partner, active, onClick }: { partner: Profile; active: boolean; onClick: () => void }) {
+function PartnerButton({ partner, active, isOnline, onClick, onDelete }: {
+  partner: Profile
+  active: boolean
+  isOnline: boolean
+  onClick: () => void
+  onDelete: () => void
+}) {
   return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-2 mx-2 py-2 rounded-md transition-colors group ${
-        active ? 'bg-discord-600 text-white' : 'text-discord-300 hover:bg-discord-700 hover:text-discord-100'
+    <div
+      className={`flex items-center gap-3 px-2 mx-2 py-2 rounded-md transition-colors cursor-pointer group ${
+        active ? 'bg-discord-600' : 'hover:bg-discord-700'
       }`}
       style={{ width: 'calc(100% - 16px)' }}
+      onClick={onClick}
     >
       <div className="relative flex-shrink-0">
         <div className="w-8 h-8 rounded-full bg-discord-accent flex items-center justify-center text-xs font-bold text-white">
           {partner.username.slice(1).toUpperCase()}
         </div>
-        <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-discord-800 bg-discord-green" />
+        <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-discord-800 ${isOnline ? 'bg-discord-green' : 'bg-discord-400'}`} />
       </div>
-      <span className="text-sm font-medium truncate">{partner.username}</span>
-    </button>
+      <span className={`text-sm font-medium truncate flex-1 ${active ? 'text-white' : 'text-discord-300 group-hover:text-discord-100'}`}>
+        {partner.username}
+      </span>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete() }}
+        className="opacity-0 group-hover:opacity-100 text-discord-400 hover:text-red-400 transition-all p-1 flex-shrink-0"
+        title="삭제"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
   )
 }
