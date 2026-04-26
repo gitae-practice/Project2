@@ -15,7 +15,7 @@ interface Props {
 
 export default function ChatArea({ channel, onToggleMemberList }: Props) {
   const { user } = useAuthStore()
-  const { messages, setMessages, addMessage } = useMessageStore()
+  const { messages, setMessages, addMessage, editMessage, removeMessage } = useMessageStore()
   const bottomRef = useRef<HTMLDivElement>(null)
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
@@ -42,7 +42,14 @@ export default function ChatArea({ channel, onToggleMemberList }: Props) {
     ch.on('broadcast', { event: 'new_message' }, ({ payload }) => {
       addMessage(payload as Message)
       if ((payload as Message).user_id !== user?.id) playSound('message')
-    }).subscribe()
+    })
+    .on('broadcast', { event: 'edit_message' }, ({ payload }) => {
+      editMessage(payload.id, payload.content)
+    })
+    .on('broadcast', { event: 'delete_message' }, ({ payload }) => {
+      removeMessage(payload.id)
+    })
+    .subscribe()
 
     return () => {
       supabase.removeChannel(ch)
@@ -64,12 +71,18 @@ export default function ChatArea({ channel, onToggleMemberList }: Props) {
       .select('*, profile:profiles(id, username, avatar_url)')
       .single()
     if (data && channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'new_message',
-        payload: data,
-      })
+      channelRef.current.send({ type: 'broadcast', event: 'new_message', payload: data })
     }
+  }
+
+  const handleEditMessage = async (id: string, content: string) => {
+    await supabase.from('messages').update({ content, is_edited: true }).eq('id', id)
+    channelRef.current?.send({ type: 'broadcast', event: 'edit_message', payload: { id, content } })
+  }
+
+  const handleDeleteMessage = async (id: string) => {
+    await supabase.from('messages').delete().eq('id', id)
+    channelRef.current?.send({ type: 'broadcast', event: 'delete_message', payload: { id } })
   }
 
   if (!channel) {
@@ -109,7 +122,16 @@ export default function ChatArea({ channel, onToggleMemberList }: Props) {
           const prev = messages[i - 1]
           const isConsecutive = !!prev && prev.user_id === msg.user_id &&
             new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime() < 5 * 60 * 1000
-          return <MessageItem key={msg.id} message={msg} isConsecutive={isConsecutive} />
+          return (
+            <MessageItem
+              key={msg.id}
+              message={msg}
+              isConsecutive={isConsecutive}
+              isOwn={msg.user_id === user?.id}
+              onEdit={handleEditMessage}
+              onDelete={handleDeleteMessage}
+            />
+          )
         })}
         <div ref={bottomRef} />
       </div>
